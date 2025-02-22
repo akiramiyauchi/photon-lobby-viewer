@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// シークレットキーを設定
+const SECRET_KEY = "YOUR_SECRET_KEY";
+
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
         return {
@@ -10,6 +13,15 @@ exports.handler = async (event, context) => {
     }
 
     const body = JSON.parse(event.body);
+
+    // シークレットキーの確認
+    if (body.secret !== SECRET_KEY) {
+        return {
+            statusCode: 403,
+            body: 'Forbidden'
+        };
+    }
+
     const data = {
         status: body.status,
         player: body.player,
