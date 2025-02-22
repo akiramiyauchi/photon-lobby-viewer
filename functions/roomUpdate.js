@@ -46,8 +46,8 @@ exports.handler = async (event, context) => {
         timestamp: new Date().toISOString()
     };
 
-    // 修正: データ保存ディレクトリのパスを修正
-    const dataDir = path.resolve(__dirname, '../../public/data');
+    // 修正: /tmp ディレクトリを使用
+    const dataDir = path.join('/tmp', 'data');
     const filePath = path.join(dataDir, 'roomUpdates.json');
 
     // 修正: ディレクトリが存在しない場合は作成
@@ -63,6 +63,8 @@ exports.handler = async (event, context) => {
     }
     currentData.push(data);
     fs.writeFileSync(filePath, JSON.stringify(currentData, null, 2));
+
+    console.log("Data saved to:", filePath); // デバッグ用
 
     return {
         statusCode: 200,
