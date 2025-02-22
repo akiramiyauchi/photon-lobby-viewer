@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // シークレットキーを設定
-const SECRET_KEY = "YOUR_SECRET_KEY";
+const SECRET_KEY = "MySecretKey123";
 
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
