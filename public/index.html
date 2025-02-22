@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Photon Fusion ロビー参加状況</title>
+</head>
+<body>
+    <h1>ロビー参加状況</h1>
+    <ul id="playerList"></ul>
+
+    <script>
+        async function fetchRoomUpdates() {
+            const response = await fetch('/data/roomUpdates.json');
+            const data = await response.json();
+
+            const playerList = document.getElementById('playerList');
+            playerList.innerHTML = '';
+            data.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `Player ${item.player} ${item.status} at ${item.timestamp}`;
+                playerList.appendChild(listItem);
+            });
+        }
+
+        setInterval(fetchRoomUpdates, 3000); // 3秒ごとに更新
+    </script>
+</body>
+</html>
