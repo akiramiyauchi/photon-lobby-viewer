@@ -9,7 +9,8 @@
 
     <script>
         async function fetchRoomUpdates() {
-            const response = await fetch('/data/roomUpdates.json');
+            // 修正: Netlify Functions から取得
+            const response = await fetch('/.netlify/functions/getRoomUpdates');
             const data = await response.json();
 
             const playerList = document.getElementById('playerList');
