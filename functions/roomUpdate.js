@@ -1,8 +1,8 @@
-const { db } = require("./firebase");
+const { db } = require("./firebase"); // dbを再定義しない！
 const admin = require("firebase-admin");
 
 const SECRET_KEY = "MySecretKey123";
-const EXPIRATION_TIME = 10 * 1000; // 10秒（古すぎるプレイヤーを削除）
+const EXPIRATION_TIME = 10 * 1000; // 10秒
 
 exports.handler = async (event) => {
     if (event.httpMethod !== "POST") {
@@ -20,7 +20,7 @@ exports.handler = async (event) => {
         return { statusCode: 403, body: "Forbidden" };
     }
 
-    const now = Date.now(); // 現在の時刻（ミリ秒）
+    const now = Date.now();
     const playersData = {};
 
     body.players.forEach(player => {
@@ -39,19 +39,13 @@ exports.handler = async (event) => {
                 const existingPlayers = lobbyDoc.data().players || {};
                 const updatedPlayers = {};
 
-                // プレイヤーの更新 & 古いプレイヤーの削除
                 Object.keys(existingPlayers).forEach(player => {
-                    if (playersData[player]) {
-                        updatedPlayers[player] = playersData[player]; // アクティブなプレイヤーを更新
-                    } else {
-                        const lastUpdated = existingPlayers[player].timestamp?.toMillis() || 0;
-                        if (now - lastUpdated < EXPIRATION_TIME) {
-                            updatedPlayers[player] = existingPlayers[player]; // 期限内のプレイヤーは維持
-                        }
+                    const lastUpdated = existingPlayers[player].timestamp?.toMillis() || 0;
+                    if (now - lastUpdated < EXPIRATION_TIME) {
+                        updatedPlayers[player] = existingPlayers[player]; 
                     }
                 });
 
-                // 新しいプレイヤーを追加
                 Object.keys(playersData).forEach(player => {
                     updatedPlayers[player] = playersData[player];
                 });
@@ -65,6 +59,6 @@ exports.handler = async (event) => {
         return { statusCode: 200, body: JSON.stringify({ message: "Lobby update saved" }) };
     } catch (error) {
         console.error("Error updating lobby:", error);
-        return { statusCode: 500, body: "Database Error" };
+        return { statusCode: 500, body: JSON.stringify({ error: "Database Error", details: error.message }) };
     }
 };
