@@ -1,4 +1,5 @@
 const { db } = require("./firebase");
+const admin = require("firebase-admin");
 
 const SECRET_KEY = "MySecretKey123";
 
@@ -21,7 +22,7 @@ exports.handler = async (event) => {
     const data = {
         status: body.status,
         player: body.player,
-        timestamp: new Date().toISOString(),
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),  // Firestore の Timestamp を自動生成
     };
 
     try {
