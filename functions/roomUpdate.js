@@ -1,73 +1,33 @@
-const fs = require('fs');
-const path = require('path');
+const { db } = require("./firebase");
 
-// シークレットキーを設定
-const SECRET_KEY = "MySecretKey123";  // Unity スクリプトと同じ値にする
+const SECRET_KEY = "MySecretKey123";
 
-exports.handler = async (event, context) => {
-    if (event.httpMethod !== 'POST') {
-        return {
-            statusCode: 405,
-            body: 'Method Not Allowed'
-        };
+exports.handler = async (event) => {
+    if (event.httpMethod !== "POST") {
+        return { statusCode: 405, body: "Method Not Allowed" };
     }
 
-    // デバッグ用ログを追加
-    console.log("Event Body:", event.body);
-
-    // JSON をパース
     let body;
     try {
         body = JSON.parse(event.body);
-        console.log("Parsed Body:", body);  // デバッグ用
     } catch (error) {
-        console.error("JSON parse error:", error);
-        return {
-            statusCode: 400,
-            body: 'Invalid JSON'
-        };
+        return { statusCode: 400, body: "Invalid JSON" };
     }
 
-    // シークレットキーの確認
-    console.log("Received Secret:", body.secret); // デバッグ用
-    console.log("Expected Secret:", SECRET_KEY);  // デバッグ用
-
     if (body.secret !== SECRET_KEY) {
-        console.error("Invalid Secret Key");
-        return {
-            statusCode: 403,
-            body: 'Forbidden'
-        };
+        return { statusCode: 403, body: "Forbidden" };
     }
 
     const data = {
         status: body.status,
         player: body.player,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
     };
 
-    // 修正: /tmp ディレクトリを使用
-    const dataDir = path.join('/tmp', 'data');
-    const filePath = path.join(dataDir, 'roomUpdates.json');
-
-    // 修正: ディレクトリが存在しない場合は作成
-    if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, { recursive: true });
+    try {
+        await db.collection("rooms").doc("lobby").collection("players").add(data);
+        return { statusCode: 200, body: JSON.stringify({ message: "Room update saved" }) };
+    } catch (error) {
+        return { statusCode: 500, body: "Database Error" };
     }
-
-    // JSON を保存
-    let currentData = [];
-    if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath);
-        currentData = JSON.parse(fileContent);
-    }
-    currentData.push(data);
-    fs.writeFileSync(filePath, JSON.stringify(currentData, null, 2));
-
-    console.log("Data saved to:", filePath); // デバッグ用
-
-    return {
-        statusCode: 200,
-        body: JSON.stringify({ message: "Room update received" })
-    };
 };
