@@ -1,4 +1,4 @@
-const { db } = require("./firebase"); // dbを再定義しない！
+const { db } = require("./firebase");
 const admin = require("firebase-admin");
 
 const SECRET_KEY = "MySecretKey123";
@@ -20,45 +20,25 @@ exports.handler = async (event) => {
         return { statusCode: 403, body: "Forbidden" };
     }
 
-    const now = Date.now();
+    const now = admin.firestore.Timestamp.now(); // 🔹 Firestore の `Timestamp` を使用
     const playersData = {};
 
     body.players.forEach(player => {
         playersData[player] = {
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
+            player: player,
+            status: "Joined",
+            timestamp: now // 🔹 `timestamp` を Firestore の `Timestamp` にする
         };
     });
 
     try {
         const lobbyRef = db.collection("rooms").doc("lobby");
 
-        await db.runTransaction(async (transaction) => {
-            const lobbyDoc = await transaction.get(lobbyRef);
-
-            if (lobbyDoc.exists) {
-                const existingPlayers = lobbyDoc.data().players || {};
-                const updatedPlayers = {};
-
-                Object.keys(existingPlayers).forEach(player => {
-                    const lastUpdated = existingPlayers[player].timestamp?.toMillis() || 0;
-                    if (now - lastUpdated < EXPIRATION_TIME) {
-                        updatedPlayers[player] = existingPlayers[player]; 
-                    }
-                });
-
-                Object.keys(playersData).forEach(player => {
-                    updatedPlayers[player] = playersData[player];
-                });
-
-                transaction.set(lobbyRef, { players: updatedPlayers, lastUpdated: admin.firestore.FieldValue.serverTimestamp() });
-            } else {
-                transaction.set(lobbyRef, { players: playersData, lastUpdated: admin.firestore.FieldValue.serverTimestamp() });
-            }
-        });
+        await lobbyRef.set({ players: playersData }, { merge: true });
 
         return { statusCode: 200, body: JSON.stringify({ message: "Lobby update saved" }) };
     } catch (error) {
-        console.error("Error updating lobby:", error);
+        console.error("🔥 Error updating lobby:", error);
         return { statusCode: 500, body: JSON.stringify({ error: "Database Error", details: error.message }) };
     }
 };
