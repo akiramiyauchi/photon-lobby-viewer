@@ -11,11 +11,13 @@ exports.handler = async (event) => {
     let body;
     try {
         body = JSON.parse(event.body);
+        console.log("📌 Received Secret Key:", body.secret); // 🔹 シークレットキーのログ
     } catch (error) {
         return { statusCode: 400, body: "Invalid JSON" };
     }
 
     if (body.secret !== SECRET_KEY) {
+        console.error("❌ Invalid Secret Key! Received:", body.secret);
         return { statusCode: 403, body: "Forbidden" };
     }
 
