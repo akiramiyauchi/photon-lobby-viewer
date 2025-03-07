@@ -34,8 +34,8 @@
             if (!timestamp) return "Unknown time";
 
             // Firestore の Timestamp 型対応
-            if (timestamp._seconds) {
-                return new Date(timestamp._seconds * 1000).toLocaleString();
+            if (timestamp.seconds) {
+                return new Date(timestamp.seconds * 1000).toLocaleString();
             }
 
             // 文字列の Timestamp も対応
@@ -57,14 +57,17 @@
                 const playerList = document.getElementById('playerList');
                 playerList.innerHTML = '';
 
-                if (data.length === 0) {
+                // 🔹 Firestore から取得した `players` オブジェクトをループ処理
+                if (!data.players || Object.keys(data.players).length === 0) {
                     playerList.innerHTML = '<li>現在、ロビーにプレイヤーはいません。</li>';
                     return;
                 }
 
-                data.forEach(item => {
+                Object.keys(data.players).forEach(oculusId => {
+                    const playerData = data.players[oculusId];
+
                     const listItem = document.createElement('li');
-                    listItem.textContent = `Player ${item.player} ${item.status} at ${formatTimestamp(item.timestamp)}`;
+                    listItem.textContent = `Name: ${playerData.displayName} | Status: ${playerData.status} | Oculus ID: ${oculusId} | Last Seen: ${formatTimestamp(playerData.timestamp)}`;
                     playerList.appendChild(listItem);
                 });
             } catch (error) {
