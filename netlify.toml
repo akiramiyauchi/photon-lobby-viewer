@@ -8,3 +8,7 @@
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["fs", "path", "firebase-admin"]
+
+[[scheduled_functions]]
+  name = "cleanup"
+  schedule = "@daily"  # 🔹 1日1回、自動実行
