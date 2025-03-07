@@ -19,16 +19,27 @@ exports.handler = async (event) => {
         return { statusCode: 403, body: "Forbidden" };
     }
 
-    const data = {
+    // 🔹 必要なデータがすべて送信されているかチェック
+    if (!body.oculusId || !body.displayName || !body.status) {
+        return { statusCode: 400, body: "Missing required fields" };
+    }
+
+    const playerRef = db.collection("rooms").doc("lobby").collection("players").doc(body.oculusId);
+
+    // 🔹 Firestore の `serverTimestamp()` を使用
+    const playerData = {
+        displayName: body.displayName,
+        oculusId: body.oculusId,
         status: body.status,
-        player: body.player,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),  // Firestore の Timestamp を自動生成
+        timestamp: admin.firestore.FieldValue.serverTimestamp() // 🔥 Firestore のサーバー時刻を自動で設定
     };
 
     try {
-        await db.collection("rooms").doc("lobby").collection("players").add(data);
-        return { statusCode: 200, body: JSON.stringify({ message: "Room update saved" }) };
+        await playerRef.set(playerData, { merge: true }); // 🔹 `oculusId` ごとに管理＆部分更新
+
+        return { statusCode: 200, body: JSON.stringify({ message: "Player data updated" }) };
     } catch (error) {
+        console.error("🔥 Error updating player data:", error);
         return { statusCode: 500, body: "Database Error" };
     }
 };
