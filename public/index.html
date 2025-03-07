@@ -46,25 +46,25 @@
         async function fetchRoomUpdates() {
             try {
                 const response = await fetch('/.netlify/functions/getRoomUpdates');
-        
+
                 if (!response.ok) {
                     throw new Error(`Server error: ${response.status}`);
                 }
-        
+
                 const data = await response.json();
-                console.log("Received Data:", data);
-        
+                console.log("Received Data:", data); // デバッグ用
+
                 const playerList = document.getElementById('playerList');
                 playerList.innerHTML = '';
-        
-                if (data.players.length === 0) {
+
+                if (data.length === 0) {
                     playerList.innerHTML = '<li>現在、ロビーにプレイヤーはいません。</li>';
                     return;
                 }
-        
-                data.players.forEach(player => {
+
+                data.forEach(item => {
                     const listItem = document.createElement('li');
-                    listItem.textContent = `Player ${player} is in the lobby`;
+                    listItem.textContent = `Player ${item.player} ${item.status} at ${formatTimestamp(item.timestamp)}`;
                     playerList.appendChild(listItem);
                 });
             } catch (error) {
@@ -72,7 +72,6 @@
                 document.getElementById('errorMessage').textContent = "データの取得に失敗しました。";
             }
         }
-
 
         setInterval(fetchRoomUpdates, 3000);
     </script>
