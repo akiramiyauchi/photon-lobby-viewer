@@ -1,6 +1,6 @@
 const { db } = require("./firebase");
 
-const EXPIRATION_TIME = 600 * 1000; // 60秒
+const EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 🔹 1日（86,400,000ミリ秒）
 
 exports.handler = async () => {
     try {
