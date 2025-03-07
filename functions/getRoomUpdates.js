@@ -10,10 +10,14 @@ exports.handler = async () => {
 
         snapshot.forEach(doc => {
             const data = doc.data();
-            
-            // Firestore の `serverTimestamp()` 直後の `null` 対策
+            console.log("📌 Firestore Raw Data:", JSON.stringify(data)); // 🔹 Firestore のデータをログ出力
+
+            // `timestamp` の型をチェック
+            console.log("🕒 Timestamp Type:", typeof data.timestamp, "| Value:", data.timestamp);
+
             const lastUpdated = data.timestamp?.toMillis?.() || 0;
-            
+            console.log("📅 Converted Timestamp:", lastUpdated, "| Now:", now);
+
             if (now - lastUpdated < EXPIRATION_TIME) {
                 activePlayers[data.oculusId] = {
                     displayName: data.displayName,
@@ -23,9 +27,11 @@ exports.handler = async () => {
             }
         });
 
+        console.log("✅ Active Players:", JSON.stringify(activePlayers));
+
         return {
             statusCode: 200,
-            body: JSON.stringify({ players: activePlayers }), // 🔹 `players` をオブジェクトとして返す
+            body: JSON.stringify({ players: activePlayers }),
         };
     } catch (error) {
         console.error("🔥 Error fetching room updates:", error);
