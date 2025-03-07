@@ -1,40 +1,16 @@
-const fs = require('fs');
-const path = require('path');
+const { db } = require("./firebase");
 
-exports.handler = async (event, context) => {
-    // GET メソッドのみ許可
-    if (event.httpMethod !== 'GET') {
-        return {
-            statusCode: 405,
-            body: 'Method Not Allowed'
-        };
-    }
-
-    // /tmp/data/roomUpdates.json を読み込む
-    const filePath = path.join('/tmp', 'data', 'roomUpdates.json');
-    console.log("Reading data from:", filePath);
-
-    if (!fs.existsSync(filePath)) {
-        console.log("No room updates found.");
-        return {
-            statusCode: 200,
-            body: JSON.stringify([])
-        };
-    }
-
+exports.handler = async () => {
     try {
-        const fileContent = fs.readFileSync(filePath, 'utf8');
-        const jsonData = JSON.parse(fileContent);
+        const snapshot = await db.collection("rooms").doc("lobby").collection("players").orderBy("timestamp", "desc").get();
+        let players = [];
+        snapshot.forEach(doc => players.push(doc.data()));
 
         return {
             statusCode: 200,
-            body: JSON.stringify(jsonData)
+            body: JSON.stringify(players),
         };
     } catch (error) {
-        console.error("Error reading room updates:", error);
-        return {
-            statusCode: 500,
-            body: 'Internal Server Error'
-        };
+        return { statusCode: 500, body: "Database Error" };
     }
 };
