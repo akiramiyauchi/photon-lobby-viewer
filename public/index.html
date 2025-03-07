@@ -1,69 +1,45 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lobby Viewer</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
+<script>
+    function formatTimestamp(timestamp) {
+        if (!timestamp) return "Unknown time";
+
+        // Firestore の Timestamp 型対応
+        if (timestamp.seconds) {
+            return new Date(timestamp.seconds * 1000).toLocaleString();
         }
-        #playerList {
-            list-style: none;
-            padding: 0;
-        }
-        #playerList li {
-            padding: 5px;
-            border-bottom: 1px solid #ddd;
-        }
-        #errorMessage {
-            color: red;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <h1>Lobby Viewer</h1>
-    <p id="errorMessage"></p>
-    <ul id="playerList"></ul>
 
-    <script>
-        async function fetchRoomUpdates() {
-            try {
-                const response = await fetch('/.netlify/functions/getRoomUpdates');
-                
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
-                }
+        // 文字列の Timestamp も対応
+        const date = new Date(timestamp);
+        return isNaN(date.getTime()) ? "Invalid Date" : date.toLocaleString();
+    }
 
-                const data = await response.json();
+    async function fetchRoomUpdates() {
+        try {
+            const response = await fetch('/.netlify/functions/getRoomUpdates');
 
-                const playerList = document.getElementById('playerList');
-                const errorMessage = document.getElementById('errorMessage');
-
-                // リストをクリア
-                playerList.innerHTML = '';
-                errorMessage.textContent = '';
-
-                if (data.length === 0) {
-                    playerList.innerHTML = '<li>現在、ロビーにプレイヤーはいません。</li>';
-                    return;
-                }
-
-                data.forEach(item => {
-                    const listItem = document.createElement('li');
-                    listItem.textContent = `Player ${item.player} ${item.status} at ${new Date(item.timestamp).toLocaleString()}`;
-                    playerList.appendChild(listItem);
-                });
-            } catch (error) {
-                console.error("Error fetching room updates:", error);
-                document.getElementById('errorMessage').textContent = "データの取得に失敗しました。";
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
             }
-        }
 
-        setInterval(fetchRoomUpdates, 3000); // 3秒ごとに更新
-    </script>
-</body>
-</html>
+            const data = await response.json();
+
+            const playerList = document.getElementById('playerList');
+            playerList.innerHTML = '';
+
+            if (data.length === 0) {
+                playerList.innerHTML = '<li>現在、ロビーにプレイヤーはいません。</li>';
+                return;
+            }
+
+            data.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `Player ${item.player} ${item.status} at ${formatTimestamp(item.timestamp)}`;
+                playerList.appendChild(listItem);
+            });
+        } catch (error) {
+            console.error("Error fetching room updates:", error);
+            document.getElementById('errorMessage').textContent = "データの取得に失敗しました。";
+        }
+    }
+
+    setInterval(fetchRoomUpdates, 3000);
+</script>
