@@ -3,20 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lobby Viewer</title>
+    <title>EasyPong Lobby Information</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
             padding: 20px;
         }
-        #playerList {
-            list-style: none;
-            padding: 0;
+        table {
+            width: 60%;
+            margin: auto;
+            border-collapse: collapse;
         }
-        #playerList li {
-            padding: 5px;
-            border-bottom: 1px solid #ddd;
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f4f4f4;
         }
         #errorMessage {
             color: red;
@@ -25,9 +29,20 @@
     </style>
 </head>
 <body>
-    <h1>Lobby Viewer</h1>
+    <h1>EasyPong Lobby Information</h1>
     <p id="errorMessage"></p>
-    <ul id="playerList"></ul>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Display Name</th>
+                <th>Status</th>
+                <th>Last Seen</th>
+            </tr>
+        </thead>
+        <tbody id="playerTableBody">
+        </tbody>
+    </table>
 
     <script>
         function formatTimestamp(timestamp) {
@@ -52,27 +67,30 @@
                 }
 
                 const data = await response.json();
-                console.log("Received Data:", data); // デバッグ用
+                console.log("📌 取得したデータ:", data); // 🔹 日本語のログ
 
-                const playerList = document.getElementById('playerList');
-                playerList.innerHTML = '';
+                const playerTableBody = document.getElementById('playerTableBody');
+                playerTableBody.innerHTML = '';
 
-                // 🔹 Firestore から取得した `players` オブジェクトをループ処理
                 if (!data.players || Object.keys(data.players).length === 0) {
-                    playerList.innerHTML = '<li>現在、ロビーにプレイヤーはいません。</li>';
+                    playerTableBody.innerHTML = '<tr><td colspan="3">No players in the lobby.</td></tr>';
                     return;
                 }
 
                 Object.keys(data.players).forEach(oculusId => {
                     const playerData = data.players[oculusId];
 
-                    const listItem = document.createElement('li');
-                    listItem.textContent = `Name: ${playerData.displayName} | Status: ${playerData.status} | Oculus ID: ${oculusId} | Last Seen: ${formatTimestamp(playerData.timestamp)}`;
-                    playerList.appendChild(listItem);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${playerData.displayName}</td>
+                        <td>${playerData.status}</td>
+                        <td>${formatTimestamp(playerData.timestamp)}</td>
+                    `;
+                    playerTableBody.appendChild(row);
                 });
             } catch (error) {
-                console.error("Error fetching room updates:", error);
-                document.getElementById('errorMessage').textContent = "データの取得に失敗しました。";
+                console.error("❌ データの取得に失敗しました:", error); // 🔹 日本語のログ
+                document.getElementById('errorMessage').textContent = "Failed to fetch data.";
             }
         }
 
