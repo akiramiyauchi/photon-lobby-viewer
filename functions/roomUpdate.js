@@ -28,11 +28,12 @@ exports.handler = async (event) => {
 
     // 🔹 Firestore の `serverTimestamp()` を使用
     const playerData = {
+        oculusId: body.oculusId, // 🔹 キーとして使う ID を最初に定義
         displayName: body.displayName,
-        oculusId: body.oculusId,
         status: body.status,
-        timestamp: admin.firestore.FieldValue.serverTimestamp() // 🔥 Firestore のサーバー時刻を自動で設定
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
     };
+
 
     try {
         await playerRef.set(playerData, { merge: true }); // 🔹 `oculusId` ごとに管理＆部分更新
