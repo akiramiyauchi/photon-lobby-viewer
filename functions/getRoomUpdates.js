@@ -1,11 +1,19 @@
 const { db } = require("./firebase");
+const admin = require("firebase-admin");
 
-const EXPIRATION_TIME = 60 * 1000; // 60秒（テスト用）
+const EXPIRATION_TIME = 60 * 1000; // 🔹 60秒以内のデータを取得
 
 exports.handler = async () => {
     try {
-        const snapshot = await db.collection("rooms").doc("lobby").collection("players").get();
         const now = Date.now();
+        console.log("📌 Fetching active players...");
+
+        const snapshot = await db.collection("rooms")
+            .doc("lobby")
+            .collection("players")
+            .where("timestamp", ">", admin.firestore.Timestamp.fromMillis(now - EXPIRATION_TIME)) // 🔥 60秒以内のデータのみ取得
+            .get();
+
         const activePlayers = {};
 
         snapshot.forEach(doc => {
@@ -15,14 +23,12 @@ exports.handler = async () => {
             const lastUpdated = data.timestamp?.toMillis?.() || 0;
             console.log("📅 Converted Timestamp:", lastUpdated, "| Now:", now);
 
-            if (now - lastUpdated < EXPIRATION_TIME) {
-                activePlayers[data.oculusId] = {
-                    displayName: data.displayName,
-                    status: data.status,
-                    level: typeof data.level === "number" ? data.level : "N/A", // 🔹 `level` を取得
-                    timestamp: lastUpdated
-                };
-            }
+            activePlayers[data.oculusId] = {
+                displayName: data.displayName,
+                status: data.status,
+                level: typeof data.level === "number" ? data.level : "N/A", // 🔹 `level` を取得
+                timestamp: lastUpdated
+            };
         });
 
         console.log("✅ Active Players:", JSON.stringify(activePlayers));
