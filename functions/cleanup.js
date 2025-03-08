@@ -1,9 +1,8 @@
 const { db } = require("./firebase");
-const { schedule } = require("@netlify/functions");
 
 const EXPIRATION_TIME = 10 * 60 * 1000; // 10分（600,000ミリ秒）
 
-exports.handler = schedule("every 10 minutes", async () => {
+exports.handler = async () => {
     try {
         console.log("🧹 Running Firestore Cleanup...");
 
@@ -39,4 +38,4 @@ exports.handler = schedule("every 10 minutes", async () => {
         console.error("🔥 Error in Firestore Cleanup:", error);
         return { statusCode: 500, body: JSON.stringify({ error: "Cleanup failed", details: error.message }) };
     }
-});
+};
