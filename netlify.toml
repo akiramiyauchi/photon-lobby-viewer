@@ -8,3 +8,7 @@
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["fs", "path", "firebase-admin"]
+
+# ✅ `cleanup` 関数のスケジュールを Netlify に設定
+[functions."cleanup"]
+schedule = "*/10 * * * *"  # 🔹 10分ごとに実行
