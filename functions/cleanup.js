@@ -3,7 +3,8 @@ const { schedule } = require("@netlify/functions");
 
 const EXPIRATION_TIME = 10 * 60 * 1000; // 10分（600,000ミリ秒）
 
-const handler = async () => {
+// 🔹 Netlify が `exports.handler` を探しているので `module.exports` ではなく `exports.handler` にする
+exports.handler = schedule("every 10 minutes", async () => {
     try {
         console.log("🧹 Running Firestore Cleanup...");
 
@@ -39,7 +40,4 @@ const handler = async () => {
         console.error("🔥 Error in Firestore Cleanup:", error);
         return { statusCode: 500, body: JSON.stringify({ error: "Cleanup failed", details: error.message }) };
     }
-};
-
-// ✅ Netlify のスケジュール関数を `module.exports` で登録
-module.exports = schedule("every 10 minutes", handler);
+});
