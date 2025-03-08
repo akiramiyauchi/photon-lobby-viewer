@@ -33,6 +33,7 @@ exports.handler = async (event) => {
         oculusId: body.oculusId, // 🔹 キーとして使う ID を最初に定義
         displayName: body.displayName,
         status: body.status,
+        level: playerLevel,  // 🔹 Firestore に `level` を追加！
         timestamp: admin.firestore.FieldValue.serverTimestamp()
     };
 
