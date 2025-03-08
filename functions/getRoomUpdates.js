@@ -1,37 +1,49 @@
 const { db } = require("./firebase");
 const admin = require("firebase-admin");
 
-const EXPIRATION_TIME = 60 * 1000; // 🔹 60秒以内のデータを取得
+const EXPIRATION_TIME = 60 * 1000; // 🔹 60秒以内のデータのみ取得
+const CACHE_DURATION = 30 * 1000; // 🔥 30秒間キャッシュ
+
+let cachedData = null;
+let lastFetchTime = 0;
 
 exports.handler = async () => {
     try {
         const now = Date.now();
-        console.log("📌 Fetching active players...");
+
+        // 🔥 キャッシュが有効なら、Firestore にアクセスせずそのまま返す
+        if (cachedData && now - lastFetchTime < CACHE_DURATION) {
+            console.log("🟢 Returning cached data...");
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ players: cachedData }),
+            };
+        }
+
+        console.log("📌 Fetching fresh data from Firestore...");
 
         const snapshot = await db.collection("rooms")
             .doc("lobby")
             .collection("players")
-            .where("timestamp", ">", admin.firestore.Timestamp.fromMillis(now - EXPIRATION_TIME)) // 🔥 60秒以内のデータのみ取得
+            .where("timestamp", ">", admin.firestore.Timestamp.fromMillis(now - EXPIRATION_TIME))
             .get();
 
         const activePlayers = {};
 
         snapshot.forEach(doc => {
             const data = doc.data();
-            console.log("📌 Firestore Raw Data:", JSON.stringify(data));
-
-            const lastUpdated = data.timestamp?.toMillis?.() || 0;
-            console.log("📅 Converted Timestamp:", lastUpdated, "| Now:", now);
-
             activePlayers[data.oculusId] = {
                 displayName: data.displayName,
                 status: data.status,
-                level: typeof data.level === "number" ? data.level : "N/A", // 🔹 `level` を取得
-                timestamp: lastUpdated
+                level: typeof data.level === "number" ? data.level : "N/A",
             };
         });
 
-        console.log("✅ Active Players:", JSON.stringify(activePlayers));
+        console.log(`✅ Found ${Object.keys(activePlayers).length} active players.`);
+
+        // 🔥 キャッシュを更新
+        cachedData = activePlayers;
+        lastFetchTime = now;
 
         return {
             statusCode: 200,
