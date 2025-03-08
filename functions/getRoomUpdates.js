@@ -1,7 +1,7 @@
 const { db } = require("./firebase");
 
 //const EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 🔹 1日（86,400,000ミリ秒）
-const EXPIRATION_TIME =  60 * 1000; // 🔹 60秒
+const EXPIRATION_TIME = 60 * 1000; // 🔹 60秒（テスト用）
 
 exports.handler = async () => {
     try {
@@ -23,6 +23,7 @@ exports.handler = async () => {
                 activePlayers[data.oculusId] = {
                     displayName: data.displayName,
                     status: data.status,
+                    level: data.level ?? "N/A", // 🔹 `level` を追加！（存在しない場合は "N/A"）
                     timestamp: lastUpdated
                 };
             }
