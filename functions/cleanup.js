@@ -3,8 +3,7 @@ const { schedule } = require("@netlify/functions");
 
 const EXPIRATION_TIME = 10 * 60 * 1000; // 10分（600,000ミリ秒）
 
-// ✅ `schedule()` を `module.exports` に変更
-module.exports = schedule("every 10 minutes", async () => {
+exports.handler = schedule("every 10 minutes", async () => {
     try {
         console.log("🧹 Running Firestore Cleanup...");
 
