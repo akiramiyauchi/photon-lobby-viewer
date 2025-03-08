@@ -26,6 +26,7 @@ exports.handler = async (event) => {
     const playerRef = db.collection("rooms").doc("lobby").collection("players").doc(body.oculusId);
 
     const playerData = {
+        oculusId: body.oculusId, // 🔹 キーとして使う ID を最初に定義
         displayName: body.displayName,
         status: body.status,
         level: playerLevel,  // 🔹 `level` を数値で保存！
