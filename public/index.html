@@ -56,6 +56,15 @@
             document.getElementById('currentTime').textContent = `Current Time: ${now}`;
         }
 
+        function getLevelName(level) {
+            const levelMapping = {
+                0: "Beginner0",  1: "Beginner1",  2: "Beginner2",  3: "Beginner3",  4: "Beginner4",
+                5: "Advanced1",  6: "Advanced2",  7: "Advanced3",  8: "Advanced4",  9: "Advanced5",
+                10: "Expert1",  11: "Expert2",  12: "Expert3"
+            };
+            return levelMapping[level] ?? "N/A"; // 🔹 指定外の値なら "N/A"
+        }
+
         async function fetchRoomUpdates() {
             try {
                 const response = await fetch('/.netlify/functions/getRoomUpdates');
@@ -81,7 +90,7 @@
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${playerData.displayName}</td>
-                        <td>${playerData.level ?? "N/A"}</td> <!-- 🔹 レベルを表示 -->
+                        <td>${getLevelName(playerData.level)}</td> <!-- 🔹 レベルを変換して表示 -->
                         <td>${playerData.status}</td>
                     `;
                     playerTableBody.appendChild(row);
