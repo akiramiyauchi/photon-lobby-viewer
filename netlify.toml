@@ -11,4 +11,5 @@
 
 [[scheduled_functions]]
   name = "cleanup"
-  schedule = "cron(*/10 * * * *)" # 🔹 10分ごとに実行
+  schedule = "cron(0,10,20,30,40,50 * * * *)" # 🔹 10分ごとに実行
+
