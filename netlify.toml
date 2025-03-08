@@ -11,4 +11,4 @@
 
 [[scheduled_functions]]
   name = "cleanup"
-  schedule = "@daily"  # 🔹 1日1回、自動実行
+  schedule = "cron(*/10 * * * *)" # 🔹 10分ごとに実行
