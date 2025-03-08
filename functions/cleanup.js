@@ -41,5 +41,5 @@ const handler = async () => {
     }
 };
 
-// ✅ `schedule` を利用して関数を Netlify に登録！
-exports.handler = schedule("every 10 minutes", handler);
+// ✅ Netlify のスケジュール関数を `module.exports` で登録
+module.exports = schedule("every 10 minutes", handler);
