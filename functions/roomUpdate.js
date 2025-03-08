@@ -11,35 +11,29 @@ exports.handler = async (event) => {
     let body;
     try {
         body = JSON.parse(event.body);
-        console.log("📌 Received Secret Key:", body.secret); // 🔹 シークレットキーのログ
+        console.log("📌 Received Data:", body);
     } catch (error) {
         return { statusCode: 400, body: "Invalid JSON" };
     }
 
     if (body.secret !== SECRET_KEY) {
-        console.error("❌ Invalid Secret Key! Received:", body.secret);
         return { statusCode: 403, body: "Forbidden" };
     }
 
-    // 🔹 必要なデータがすべて送信されているかチェック
-    if (!body.oculusId || !body.displayName || !body.status) {
-        return { statusCode: 400, body: "Missing required fields" };
-    }
+    // 🔹 `level` を整数に変換（デフォルト `1`）
+    const playerLevel = parseInt(body.level, 10) || 1;
 
     const playerRef = db.collection("rooms").doc("lobby").collection("players").doc(body.oculusId);
 
-    // 🔹 Firestore の `serverTimestamp()` を使用
     const playerData = {
-        oculusId: body.oculusId, // 🔹 キーとして使う ID を最初に定義
         displayName: body.displayName,
         status: body.status,
-        level: playerLevel,  // 🔹 Firestore に `level` を追加！
+        level: playerLevel,  // 🔹 `level` を数値で保存！
         timestamp: admin.firestore.FieldValue.serverTimestamp()
     };
 
-
     try {
-        await playerRef.set(playerData, { merge: true }); // 🔹 `oculusId` ごとに管理＆部分更新
+        await playerRef.set(playerData, { merge: true });
 
         return { statusCode: 200, body: JSON.stringify({ message: "Player data updated" }) };
     } catch (error) {
