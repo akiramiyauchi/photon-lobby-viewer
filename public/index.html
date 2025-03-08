@@ -1,51 +1,105 @@
-<table>
-    <thead>
-        <tr>
-            <th>Display Name</th>
-            <th>Level</th>  <!-- 🔹 レベルの列を追加 -->
-            <th>Status</th>
-        </tr>
-    </thead>
-    <tbody id="playerTableBody">
-    </tbody>
-</table>
-
-<script>
-    async function fetchRoomUpdates() {
-        try {
-            const response = await fetch('/.netlify/functions/getRoomUpdates');
-
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log("📌 取得したデータ:", data);
-
-            const playerTableBody = document.getElementById('playerTableBody');
-            playerTableBody.innerHTML = '';
-
-            if (!data.players || Object.keys(data.players).length === 0) {
-                playerTableBody.innerHTML = '<tr><td colspan="3">No players in the lobby.</td></tr>';
-                return;
-            }
-
-            Object.keys(data.players).forEach(oculusId => {
-                const playerData = data.players[oculusId];
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${playerData.displayName}</td>
-                    <td>${playerData.level ?? "N/A"}</td>  <!-- 🔹 レベルを表示 -->
-                    <td>${playerData.status}</td>
-                `;
-                playerTableBody.appendChild(row);
-            });
-        } catch (error) {
-            console.error("❌ データの取得に失敗しました:", error);
-            document.getElementById('errorMessage').textContent = "Failed to fetch data.";
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyPong Lobby Information</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
         }
-    }
+        table {
+            width: 50%;
+            margin: auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        #errorMessage {
+            color: red;
+            font-weight: bold;
+        }
+        #currentTime {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>EasyPong Lobby Information</h1>
+    <p id="currentTime"></p> <!-- 🔹 現在時刻表示エリア -->
+    <p id="errorMessage"></p>
 
-    setInterval(fetchRoomUpdates, 3000);
-</script>
+    <table>
+        <thead>
+            <tr>
+                <th>Display Name</th>
+                <th>Level</th> <!-- 🔹 レベル列を追加 -->
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="playerTableBody">
+        </tbody>
+    </table>
+
+    <script>
+        function updateCurrentTime() {
+            const now = new Date().toLocaleString();
+            document.getElementById('currentTime').textContent = `Current Time: ${now}`;
+        }
+
+        async function fetchRoomUpdates() {
+            try {
+                const response = await fetch('/.netlify/functions/getRoomUpdates');
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("📌 取得したデータ:", data); // 🔹 日本語のログ
+
+                const playerTableBody = document.getElementById('playerTableBody');
+                playerTableBody.innerHTML = '';
+
+                if (!data.players || Object.keys(data.players).length === 0) {
+                    playerTableBody.innerHTML = '<tr><td colspan="3">No players in the lobby.</td></tr>';
+                    return;
+                }
+
+                Object.keys(data.players).forEach(oculusId => {
+                    const playerData = data.players[oculusId];
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${playerData.displayName}</td>
+                        <td>${playerData.level ?? "N/A"}</td> <!-- 🔹 レベルを表示 -->
+                        <td>${playerData.status}</td>
+                    `;
+                    playerTableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error("❌ データの取得に失敗しました:", error); // 🔹 日本語のログ
+                document.getElementById('errorMessage').textContent = "Failed to fetch data.";
+            }
+        }
+
+        // 🔹 現在時刻の更新（1秒ごと）
+        setInterval(updateCurrentTime, 1000);
+        // 🔹 ロビー情報の取得（3秒ごと）
+        setInterval(fetchRoomUpdates, 3000);
+
+        // 初回表示をすぐ更新
+        updateCurrentTime();
+        fetchRoomUpdates();
+    </script>
+</body>
+</html>
