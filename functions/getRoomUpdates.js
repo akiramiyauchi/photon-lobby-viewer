@@ -1,8 +1,8 @@
 const { db } = require("./firebase");
 const admin = require("firebase-admin");
 
-const EXPIRATION_TIME = 10 * 1000; // 🔹 10秒以内のデータのみ取得
-const CACHE_DURATION = 10 * 1000; // 🔥 10秒間キャッシュ
+const EXPIRATION_TIME = 20 * 1000; // 🔹 20秒以内のデータのみ取得
+const CACHE_DURATION = 20 * 1000; // 🔥 20秒間キャッシュ
 
 let cachedData = null;
 let lastFetchTime = 0;
