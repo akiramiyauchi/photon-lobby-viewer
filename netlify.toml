@@ -11,5 +11,5 @@
 
 # ✅ `cleanup` 関数のスケジュールを Netlify に設定
 [functions."cleanup"]
-#schedule = "0 0 * * *"  # 🔥 毎日 0時に実行
-schedule = "*/10 * * * *"  # 🔹 10分ごとに実行
+schedule = "0 0 * * *"  # 🔥 毎日 0時に実行
+#schedule = "*/10 * * * *"  # 🔹 10分ごとに実行
