@@ -95,6 +95,8 @@
                     `;
                     playerTableBody.appendChild(row);
                 });
+                // ✅ 成功したらエラーメッセージを消す
+                document.getElementById('errorMessage').textContent = "";
             } catch (error) {
                 console.error("❌ データの取得に失敗しました:", error); // 🔹 日本語のログ
                 document.getElementById('errorMessage').textContent = "Failed to fetch data.";
