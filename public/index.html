@@ -11,7 +11,7 @@
             padding: 20px;
         }
         table {
-            width: 50%;
+            width: 60%;
             margin: auto;
             border-collapse: collapse;
         }
@@ -31,26 +31,34 @@
             font-weight: bold;
             margin-bottom: 10px;
         }
+        /* クリックできるヘッダっぽく見せる */
+        #joinedAtHeader {
+            cursor: pointer;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
     <h1>EasyPong Lobby Information</h1>
-    <p id="currentTime"></p> <!-- 🔹 現在時刻表示エリア -->
+    <p id="currentTime"></p>
     <p id="errorMessage"></p>
 
     <table>
         <thead>
             <tr>
                 <th>Display Name</th>
-                <th>Level</th> <!-- 🔹 レベル列を追加 -->
+                <th>Level</th>
+                <th id="joinedAtHeader">Joined At ▲</th>
                 <th>Status</th>
             </tr>
         </thead>
-        <tbody id="playerTableBody">
-        </tbody>
+        <tbody id="playerTableBody"></tbody>
     </table>
 
     <script>
+        // true = 古い順(昇順), false = 新しい順(降順)
+        let sortAscending = true;
+
         function updateCurrentTime() {
             const now = new Date().toLocaleString();
             document.getElementById('currentTime').textContent = `Current Time: ${now}`;
@@ -62,7 +70,15 @@
                 5: "Advanced1",  6: "Advanced2",  7: "Advanced3",  8: "Advanced4",  9: "Advanced5",
                 10: "Expert1",  11: "Expert2",  12: "Expert3"
             };
-            return levelMapping[level] ?? "N/A"; // 🔹 指定外の値なら "N/A"
+            return levelMapping[level] ?? "N/A";
+        }
+
+        // joinedAt(ms) を表示用文字列に
+        function formatJoinedAt(ms) {
+            if (!ms || typeof ms !== "number") return "N/A";
+            const d = new Date(ms);
+            if (isNaN(d.getTime())) return "N/A";
+            return d.toLocaleString();
         }
 
         async function fetchRoomUpdates() {
@@ -74,41 +90,62 @@
                 }
 
                 const data = await response.json();
-                console.log("📌 取得したデータ:", data); // 🔹 日本語のログ
+                console.log("📌 取得したデータ:", data);
 
                 const playerTableBody = document.getElementById('playerTableBody');
                 playerTableBody.innerHTML = '';
 
                 if (!data.players || Object.keys(data.players).length === 0) {
-                    playerTableBody.innerHTML = '<tr><td colspan="3">No players in the lobby.</td></tr>';
+                    playerTableBody.innerHTML = '<tr><td colspan="4">No players in the lobby.</td></tr>';
+                    document.getElementById('errorMessage').textContent = "";
                     return;
                 }
 
-                Object.keys(data.players).forEach(oculusId => {
-                    const playerData = data.players[oculusId];
+                // オブジェクト -> 配列にしてソート
+                const playersArray = Object.keys(data.players).map(oculusId => {
+                    return { oculusId, ...data.players[oculusId] };
+                });
 
+                // joinedAt でソート（joinedAtが無い人は最後へ）
+                playersArray.sort((a, b) => {
+                    const aTime = (typeof a.joinedAt === "number") ? a.joinedAt : Number.POSITIVE_INFINITY;
+                    const bTime = (typeof b.joinedAt === "number") ? b.joinedAt : Number.POSITIVE_INFINITY;
+                    return sortAscending ? (aTime - bTime) : (bTime - aTime);
+                });
+
+                playersArray.forEach(playerData => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${playerData.displayName}</td>
-                        <td>${getLevelName(playerData.level)}</td> <!-- 🔹 レベルを変換して表示 -->
-                        <td>${playerData.status}</td>
+                        <td>${playerData.displayName ?? "N/A"}</td>
+                        <td>${getLevelName(playerData.level)}</td>
+                        <td>${formatJoinedAt(playerData.joinedAt)}</td>
+                        <td>${playerData.status ?? "N/A"}</td>
                     `;
                     playerTableBody.appendChild(row);
                 });
+
                 // ✅ 成功したらエラーメッセージを消す
                 document.getElementById('errorMessage').textContent = "";
             } catch (error) {
-                console.error("❌ データの取得に失敗しました:", error); // 🔹 日本語のログ
+                console.error("❌ データの取得に失敗しました:", error);
                 document.getElementById('errorMessage').textContent = "Failed to fetch data.";
             }
         }
 
-        // 🔹 現在時刻の更新（1秒ごと）
+        // Joined At ヘッダクリックでソート方向切り替え
+        document.getElementById("joinedAtHeader").addEventListener("click", () => {
+            sortAscending = !sortAscending;
+            document.getElementById("joinedAtHeader").textContent =
+                sortAscending ? "Joined At ▲" : "Joined At ▼";
+            fetchRoomUpdates(); // その場で並び替え
+        });
+
+        // 現在時刻：1秒ごと
         setInterval(updateCurrentTime, 1000);
-        // 🔹 ロビー情報の取得（20秒ごと）
+        // ロビー取得：20秒ごと
         setInterval(fetchRoomUpdates, 20000);
 
-        // 初回表示をすぐ更新
+        // 初回
         updateCurrentTime();
         fetchRoomUpdates();
     </script>
