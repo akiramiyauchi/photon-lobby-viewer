@@ -48,7 +48,7 @@
     <h1>EasyPong Lobby Information</h1>
 
     <p id="currentTime"></p>
-    <button id="soundToggle">🔇 Sound: OFF</button>
+    <button id="soundToggle">🔇 Notify on new player: OFF</button>
     <p id="errorMessage"></p>
 
     <table>
@@ -127,7 +127,7 @@
             }
 
             document.getElementById("soundToggle").textContent =
-                soundEnabled ? "🔊 Sound: ON" : "🔇 Sound: OFF";
+                soundEnabled ? "🔊 Notify on new player: ON" : "🔇 Notify on new player: OFF";
         });
 
         // -------------------------
@@ -152,8 +152,14 @@
             if (!ms || typeof ms !== "number") return "N/A";
             const d = new Date(ms);
             if (isNaN(d.getTime())) return "N/A";
-            return d.toLocaleString();
+        
+            const hours = String(d.getHours()).padStart(2, "0");
+            const minutes = String(d.getMinutes()).padStart(2, "0");
+            const seconds = String(d.getSeconds()).padStart(2, "0");
+        
+            return `${hours}:${minutes}:${seconds}`;
         }
+
 
         // -------------------------
         // Fetch & render
