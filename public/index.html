@@ -36,11 +36,19 @@
             cursor: pointer;
             user-select: none;
         }
+        #soundToggle {
+            margin: 10px 0 16px 0;
+            padding: 8px 14px;
+            font-size: 14px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <h1>EasyPong Lobby Information</h1>
+
     <p id="currentTime"></p>
+    <button id="soundToggle">🔇 Sound: OFF</button>
     <p id="errorMessage"></p>
 
     <table>
@@ -56,9 +64,75 @@
     </table>
 
     <script>
+        // -------------------------
+        // Sort
+        // -------------------------
         // true = 古い順(昇順), false = 新しい順(降順)
         let sortAscending = true;
 
+        // -------------------------
+        // Sound notify
+        // -------------------------
+        let soundEnabled = false;
+        let previousPlayerIds = new Set();
+        let isFirstFetch = true;
+
+        // WebAudio（短いピッ音）
+        let audioCtx = null;
+
+        function beep() {
+            if (!soundEnabled) return;
+
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === "suspended") audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = "sine";
+                osc.frequency.value = 880; // 音の高さ
+                gain.gain.value = 0.05;    // 音量（小さめ）
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                setTimeout(() => {
+                    osc.stop();
+                    osc.disconnect();
+                    gain.disconnect();
+                }, 180); // 0.18秒
+            } catch (e) {
+                console.warn("Audio blocked or failed:", e);
+            }
+        }
+
+        document.getElementById("soundToggle").addEventListener("click", async () => {
+            soundEnabled = !soundEnabled;
+
+            // ブラウザ制限対策：ユーザー操作で AudioContext を起動
+            if (soundEnabled) {
+                try {
+                    if (!audioCtx) {
+                        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    if (audioCtx.state === "suspended") await audioCtx.resume();
+                    beep(); // テストで鳴らす
+                } catch (e) {
+                    console.warn("AudioContext resume failed:", e);
+                }
+            }
+
+            document.getElementById("soundToggle").textContent =
+                soundEnabled ? "🔊 Sound: ON" : "🔇 Sound: OFF";
+        });
+
+        // -------------------------
+        // UI helpers
+        // -------------------------
         function updateCurrentTime() {
             const now = new Date().toLocaleString();
             document.getElementById('currentTime').textContent = `Current Time: ${now}`;
@@ -81,6 +155,9 @@
             return d.toLocaleString();
         }
 
+        // -------------------------
+        // Fetch & render
+        // -------------------------
         async function fetchRoomUpdates() {
             try {
                 const response = await fetch('/.netlify/functions/getRoomUpdates');
@@ -94,6 +171,25 @@
 
                 const playerTableBody = document.getElementById('playerTableBody');
                 playerTableBody.innerHTML = '';
+
+                // -------- 新規参加者チェック（初回は鳴らさない） --------
+                const currentIds = new Set(Object.keys(data.players || {}));
+
+                if (!isFirstFetch) {
+                    let hasNewPlayer = false;
+                    for (const id of currentIds) {
+                        if (!previousPlayerIds.has(id)) {
+                            hasNewPlayer = true;
+                            break;
+                        }
+                    }
+                    if (hasNewPlayer) beep();
+                } else {
+                    isFirstFetch = false;
+                }
+
+                previousPlayerIds = currentIds;
+                // -----------------------------------------------------
 
                 if (!data.players || Object.keys(data.players).length === 0) {
                     playerTableBody.innerHTML = '<tr><td colspan="4">No players in the lobby.</td></tr>';
