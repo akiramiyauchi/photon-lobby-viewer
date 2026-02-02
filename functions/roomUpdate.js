@@ -21,7 +21,8 @@ exports.handler = async (event) => {
     }
 
     // 🔹 `level` を整数に変換（デフォルト `1`）
-    const playerLevel = parseInt(body.level, 10) || 1;
+    const parsed = parseInt(body.level, 10);
+    const playerLevel = Number.isNaN(parsed) ? 1 : parsed;
 
     const playerRef = db.collection("rooms").doc("lobby").collection("players").doc(body.oculusId);
 
