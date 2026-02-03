@@ -1,65 +1,54 @@
 const { db } = require("./firebase");
 const admin = require("firebase-admin");
 
-const EXPIRATION_TIME = 20 * 1000; // 20秒以内に更新があった人
-const CACHE_DURATION = 20 * 1000;  // 20秒キャッシュ
+const EXPIRATION_TIME = 20 * 1000;
 
-let cachedData = null;
-let lastFetchTime = 0;
-
-exports.handler = async () => {
+exports.handler = async (event) => {
   try {
     const now = Date.now();
+    const mode = event.queryStringParameters?.mode || "lobby";
 
-    // キャッシュが有効なら Firestore を読まずに返す
-    if (cachedData && now - lastFetchTime < CACHE_DURATION) {
-      return { statusCode: 200, body: JSON.stringify({ players: cachedData }) };
+    let query = db
+      .collection("rooms")
+      .doc("lobby")
+      .collection("players")
+      .where(
+        "timestamp",
+        ">",
+        admin.firestore.Timestamp.fromMillis(now - EXPIRATION_TIME)
+      );
+
+    // 🔥 ロビー専用表示
+    if (mode === "lobby") {
+      query = query.where("status", "==", "lobby");
     }
 
-    const playersRef = db.collection("rooms").doc("lobby").collection("players");
+    const snapshot = await query.get();
 
-    const snapshot = await playersRef
-      .where("timestamp", ">", admin.firestore.Timestamp.fromMillis(now - EXPIRATION_TIME))
-      .get();
-
-    const activePlayers = {};
-    const batch = db.batch();
-    let needCommit = false;
+    const players = {};
 
     snapshot.forEach(doc => {
       const data = doc.data();
 
-      // doc.id が oculusId なので、基本はこれでOK（data.oculusIdが無くても動く）
-      const oculusId = doc.id;
-
-      // joinedAt が無ければ初回扱いで付与
-      let joinedAt = data.joinedAt;
-      if (!joinedAt) {
-        joinedAt = admin.firestore.Timestamp.fromMillis(now);
-        batch.update(doc.ref, { joinedAt });
-        needCommit = true;
-      }
-
-      activePlayers[oculusId] = {
+      players[doc.id] = {
         displayName: data.displayName,
         status: data.status,
-        level: typeof data.level === "number" ? data.level : "N/A",
-
-        // フロント用
-        joinedAt: joinedAt.toMillis ? joinedAt.toMillis() : joinedAt,
+        level: data.level,
+        lobbyJoinedAt: data.lobbyJoinedAt
+          ? data.lobbyJoinedAt.toMillis()
+          : null
       };
     });
 
-    if (needCommit) await batch.commit();
-
-    cachedData = activePlayers;
-    lastFetchTime = now;
-
-    return { statusCode: 200, body: JSON.stringify({ players: activePlayers }) };
-  } catch (error) {
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ players })
+    };
+  }
+  catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Database Error", details: error.message }),
+      body: JSON.stringify({ error: err.message })
     };
   }
 };
