@@ -4,42 +4,59 @@ const admin = require("firebase-admin");
 const SECRET_KEY = "MySecretKey123";
 
 exports.handler = async (event) => {
-    if (event.httpMethod !== "POST") {
-        return { statusCode: 405, body: "Method Not Allowed" };
-    }
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method Not Allowed" };
+  }
 
-    let body;
-    try {
-        body = JSON.parse(event.body);
-        console.log("📌 Received Data:", body);
-    } catch (error) {
-        return { statusCode: 400, body: "Invalid JSON" };
-    }
+  try {
+    const body = JSON.parse(event.body);
 
     if (body.secret !== SECRET_KEY) {
-        return { statusCode: 403, body: "Forbidden" };
+      return { statusCode: 403, body: "Forbidden" };
     }
 
-    // 🔹 `level` を整数に変換（デフォルト `1`）
-    const parsed = parseInt(body.level, 10);
-    const playerLevel = Number.isNaN(parsed) ? 1 : parsed;
+    const {
+      oculusId,
+      displayName,
+      status,
+      level,
+      lobbyJoinedAt
+    } = body;
 
-    const playerRef = db.collection("rooms").doc("lobby").collection("players").doc(body.oculusId);
+    if (!oculusId) {
+      return { statusCode: 400, body: "Missing oculusId" };
+    }
 
-    const playerData = {
-        oculusId: body.oculusId, // 🔹 キーとして使う ID を最初に定義
-        displayName: body.displayName,
-        status: body.status,
-        level: playerLevel,  // 🔹 `level` を数値で保存！
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
+    const playerRef = db
+      .collection("rooms")
+      .doc("lobby")
+      .collection("players")
+      .doc(oculusId);
+
+    const now = admin.firestore.Timestamp.now();
+
+    const updateData = {
+      oculusId,
+      displayName,
+      status,
+      level,
+      timestamp: now
     };
 
-    try {
-        await playerRef.set(playerData, { merge: true });
-
-        return { statusCode: 200, body: JSON.stringify({ message: "Player data updated" }) };
-    } catch (error) {
-        console.error("🔥 Error updating player data:", error);
-        return { statusCode: 500, body: "Database Error" };
+    // 🔥 lobbyJoinedAt は lobby 状態のときだけ更新
+    if (status === "lobby" && lobbyJoinedAt) {
+      updateData.lobbyJoinedAt =
+        admin.firestore.Timestamp.fromMillis(lobbyJoinedAt);
     }
+
+    await playerRef.set(updateData, { merge: true });
+
+    return { statusCode: 200, body: "OK" };
+  }
+  catch (err) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: err.message })
+    };
+  }
 };
