@@ -5,14 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EasyPong Lobby Information</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        table { width: 60%; margin: auto; border-collapse: collapse; }
-        th, td { padding: 10px; border: 1px solid #ddd; }
-        th { background-color: #f4f4f4; }
-        #errorMessage { color: red; font-weight: bold; }
-        #currentTime { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-        #joinedAtHeader { cursor: pointer; user-select: none; }
-        #soundToggle { margin: 10px 0 16px 0; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        table {
+            width: 60%;
+            margin: auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        #errorMessage {
+            color: red;
+            font-weight: bold;
+        }
+        #currentTime {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        /* クリックできるヘッダっぽく見せる */
+        #enteredAtHeader {
+            cursor: pointer;
+            user-select: none;
+        }
+        #soundToggle {
+            margin: 10px 0 16px 0;
+            padding: 8px 14px;
+            font-size: 14px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -27,7 +56,7 @@
             <tr>
                 <th>Display Name</th>
                 <th>Level</th>
-                <th id="joinedAtHeader">Joined At ▲</th>
+                <th id="enteredAtHeader">Entered At ▲</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -38,6 +67,7 @@
         // -------------------------
         // Sort
         // -------------------------
+        // true = 古い順(昇順), false = 新しい順(降順)
         let sortAscending = true;
 
         // -------------------------
@@ -47,21 +77,24 @@
         let previousPlayerIds = new Set();
         let isFirstFetch = true;
 
+        // WebAudio（短いピッ音）
         let audioCtx = null;
 
         function beep() {
             if (!soundEnabled) return;
 
             try {
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
                 if (audioCtx.state === "suspended") audioCtx.resume();
 
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
 
                 osc.type = "sine";
-                osc.frequency.value = 880;
-                gain.gain.value = 0.05;
+                osc.frequency.value = 880; // 音の高さ
+                gain.gain.value = 0.05;    // 音量（小さめ）
 
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
@@ -71,7 +104,7 @@
                     osc.stop();
                     osc.disconnect();
                     gain.disconnect();
-                }, 180);
+                }, 180); // 0.18秒
             } catch (e) {
                 console.warn("Audio blocked or failed:", e);
             }
@@ -80,11 +113,14 @@
         document.getElementById("soundToggle").addEventListener("click", async () => {
             soundEnabled = !soundEnabled;
 
+            // ブラウザ制限対策：ユーザー操作で AudioContext を起動
             if (soundEnabled) {
                 try {
-                    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    if (!audioCtx) {
+                        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    }
                     if (audioCtx.state === "suspended") await audioCtx.resume();
-                    beep();
+                    beep(); // テストで鳴らす
                 } catch (e) {
                     console.warn("AudioContext resume failed:", e);
                 }
@@ -111,8 +147,8 @@
             return levelMapping[level] ?? "N/A";
         }
 
-        // lobbyJoinedAt(ms) を表示用文字列に（時分秒だけ）
-        function formatJoinedAt(ms) {
+        // enteredAt(ms) を表示用文字列に（時分秒だけ）
+        function formatEnteredAt(ms) {
             if (!ms || typeof ms !== "number") return "N/A";
             const d = new Date(ms);
             if (isNaN(d.getTime())) return "N/A";
@@ -120,6 +156,7 @@
             const hours = String(d.getHours()).padStart(2, "0");
             const minutes = String(d.getMinutes()).padStart(2, "0");
             const seconds = String(d.getSeconds()).padStart(2, "0");
+
             return `${hours}:${minutes}:${seconds}`;
         }
 
@@ -130,7 +167,9 @@
             try {
                 const response = await fetch('/.netlify/functions/getRoomUpdates?mode=all');
 
-                if (!response.ok) throw new Error(`Server error: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
 
                 const data = await response.json();
                 console.log("📌 取得したデータ:", data);
@@ -138,6 +177,7 @@
                 const playerTableBody = document.getElementById('playerTableBody');
                 playerTableBody.innerHTML = '';
 
+                // -------- 新規参加者チェック（初回は鳴らさない） --------
                 const currentIds = new Set(Object.keys(data.players || {}));
 
                 if (!isFirstFetch) {
@@ -152,6 +192,7 @@
                 }
 
                 previousPlayerIds = currentIds;
+                // -----------------------------------------------------
 
                 if (!data.players || Object.keys(data.players).length === 0) {
                     playerTableBody.innerHTML = '<tr><td colspan="4">No online players.</td></tr>';
@@ -159,14 +200,15 @@
                     return;
                 }
 
+                // オブジェクト -> 配列にしてソート
                 const playersArray = Object.keys(data.players).map(oculusId => {
                     return { oculusId, ...data.players[oculusId] };
                 });
 
-                // 🔥 lobbyJoinedAt でソート（無い人は最後へ）
+                // enteredAt でソート（enteredAtが無い人は最後へ）
                 playersArray.sort((a, b) => {
-                    const aTime = (typeof a.lobbyJoinedAt === "number") ? a.lobbyJoinedAt : Number.POSITIVE_INFINITY;
-                    const bTime = (typeof b.lobbyJoinedAt === "number") ? b.lobbyJoinedAt : Number.POSITIVE_INFINITY;
+                    const aTime = (typeof a.enteredAt === "number") ? a.enteredAt : Number.POSITIVE_INFINITY;
+                    const bTime = (typeof b.enteredAt === "number") ? b.enteredAt : Number.POSITIVE_INFINITY;
                     return sortAscending ? (aTime - bTime) : (bTime - aTime);
                 });
 
@@ -175,12 +217,13 @@
                     row.innerHTML = `
                         <td>${playerData.displayName ?? "N/A"}</td>
                         <td>${getLevelName(playerData.level)}</td>
-                        <td>${formatJoinedAt(playerData.lobbyJoinedAt)}</td>
+                        <td>${formatEnteredAt(playerData.enteredAt)}</td>
                         <td>${playerData.status ?? "N/A"}</td>
                     `;
                     playerTableBody.appendChild(row);
                 });
 
+                // ✅ 成功したらエラーメッセージを消す
                 document.getElementById('errorMessage').textContent = "";
             } catch (error) {
                 console.error("❌ データの取得に失敗しました:", error);
@@ -188,16 +231,20 @@
             }
         }
 
-        document.getElementById("joinedAtHeader").addEventListener("click", () => {
+        // Entered At ヘッダクリックでソート方向切り替え
+        document.getElementById("enteredAtHeader").addEventListener("click", () => {
             sortAscending = !sortAscending;
-            document.getElementById("joinedAtHeader").textContent =
-                sortAscending ? "Joined At ▲" : "Joined At ▼";
-            fetchRoomUpdates();
+            document.getElementById("enteredAtHeader").textContent =
+                sortAscending ? "Entered At ▲" : "Entered At ▼";
+            fetchRoomUpdates(); // その場で並び替え
         });
 
+        // 現在時刻：1秒ごと
         setInterval(updateCurrentTime, 1000);
+        // ロビー取得：20秒ごと
         setInterval(fetchRoomUpdates, 20000);
 
+        // 初回
         updateCurrentTime();
         fetchRoomUpdates();
     </script>
