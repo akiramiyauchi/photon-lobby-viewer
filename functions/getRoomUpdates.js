@@ -1,54 +1,66 @@
 const { db } = require("./firebase");
 const admin = require("firebase-admin");
 
-const EXPIRATION_TIME = 20 * 1000;
+const EXPIRATION_TIME = 20 * 1000;  // 20秒以内更新
+const CACHE_DURATION = 20 * 1000;
+
+let cachedData = null;
+let lastFetchTime = 0;
 
 exports.handler = async (event) => {
   try {
     const now = Date.now();
-    const mode = event.queryStringParameters?.mode || "lobby";
 
-    let query = db
+    // キャッシュ有効ならそのまま返す
+    if (cachedData && now - lastFetchTime < CACHE_DURATION) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ players: cachedData })
+      };
+    }
+
+    const playersRef = db
       .collection("rooms")
       .doc("lobby")
-      .collection("players")
+      .collection("players");
+
+    const snapshot = await playersRef
       .where(
         "timestamp",
         ">",
         admin.firestore.Timestamp.fromMillis(now - EXPIRATION_TIME)
-      );
+      )
+      .get();
 
-    // 🔥 ロビー専用表示
-    if (mode === "lobby") {
-      query = query.where("status", "==", "lobby");
-    }
-
-    const snapshot = await query.get();
-
-    const players = {};
+    const activePlayers = {};
 
     snapshot.forEach(doc => {
       const data = doc.data();
 
-      players[doc.id] = {
+      activePlayers[doc.id] = {
         displayName: data.displayName,
         status: data.status,
-        level: data.level,
-        lobbyJoinedAt: data.lobbyJoinedAt
-          ? data.lobbyJoinedAt.toMillis()
+        level: typeof data.level === "number" ? data.level : "N/A",
+
+        // 🔥 Timestamp → ミリ秒へ変換
+        enteredAt: data.enteredAt
+          ? data.enteredAt.toMillis()
           : null
       };
     });
 
+    cachedData = activePlayers;
+    lastFetchTime = now;
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ players })
+      body: JSON.stringify({ players: activePlayers })
     };
-  }
-  catch (err) {
+
+  } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({ error: error.message })
     };
   }
 };
