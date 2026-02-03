@@ -166,7 +166,7 @@
         // -------------------------
         async function fetchRoomUpdates() {
             try {
-                const response = await fetch('/.netlify/functions/getRoomUpdates');
+                const response = await fetch('/.netlify/functions/getRoomUpdates?mode=all')
 
                 if (!response.ok) {
                     throw new Error(`Server error: ${response.status}`);
